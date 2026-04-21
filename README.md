@@ -1,4 +1,3 @@
-```markdown
 # WPP-Server com Zabbix e Grafana
 
 Repositório com ambiente Dockerizado completo contendo **Zabbix** para monitoramento, **Grafana** para visualização de métricas e servidor **WhatsApp** via WPPConnect para integrações e notificações.[file:1][file:2][file:3]
