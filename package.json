@@ -1,0 +1,11 @@
+{
+  "name": "wpp-server",
+  "version": "1.0.0",
+  "main": "wpp.js",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "@wppconnect-team/wppconnect": "^1.30.0"
+  }
+}
