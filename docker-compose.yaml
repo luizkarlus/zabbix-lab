@@ -1,4 +1,7 @@
+version: "3.9"
+
 services:
+
   mysql:
     image: mysql:8.0
     container_name: zabbix-mysql
@@ -18,13 +21,13 @@ services:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
       interval: 10s
       timeout: 5s
-      retries: 12
-      start_period: 30s
+      retries: 10
+      start_period: 40s
     networks:
       - monitornet
 
   zabbix-server:
-    image: zabbix/zabbix-server-mysql:latest
+    build: ./zabbix-server
     container_name: zabbix-server
     restart: always
     depends_on:
@@ -32,12 +35,16 @@ services:
         condition: service_healthy
     environment:
       DB_SERVER_HOST: mysql
-      DB_SERVER_PORT: 3306
       MYSQL_DATABASE: zabbix
       MYSQL_USER: zabbix
       MYSQL_PASSWORD: zabbix
     ports:
       - "10051:10051"
+    healthcheck:
+      test: ["CMD", "pgrep", "zabbix_server"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
     networks:
       - monitornet
 
@@ -49,10 +56,9 @@ services:
       mysql:
         condition: service_healthy
       zabbix-server:
-        condition: service_started
+        condition: service_healthy
     environment:
       DB_SERVER_HOST: mysql
-      DB_SERVER_PORT: 3306
       MYSQL_DATABASE: zabbix
       MYSQL_USER: zabbix
       MYSQL_PASSWORD: zabbix
@@ -60,6 +66,23 @@ services:
       PHP_TZ: America/Sao_Paulo
     ports:
       - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+    networks:
+      - monitornet
+
+  zabbix-agent:
+    image: zabbix/zabbix-agent:latest
+    container_name: zabbix-agent
+    restart: always
+    environment:
+      ZBX_SERVER_HOST: zabbix-server
+    depends_on:
+      zabbix-server:
+        condition: service_healthy
     networks:
       - monitornet
 
@@ -71,18 +94,32 @@ services:
       - "3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/login"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
     networks:
       - monitornet
 
   wppconnect:
-    build: .
+    build: ./wppconnect
     container_name: wppconnect
+    restart: always
     ports:
       - "8000:8000"
     volumes:
       - wpp_tokens:/opt/wpp-server/tokens
     shm_size: "1gb"
-    restart: always
+    depends_on:
+      zabbix-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/status"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
     networks:
       - monitornet
 
